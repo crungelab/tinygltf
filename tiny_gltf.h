@@ -836,7 +836,7 @@ struct Accessor {
   struct Sparse {
     int count;
     bool isSparse;
-    struct {
+    struct Indices {
       size_t byteOffset;
       int bufferView;
       int componentType;  // a TINYGLTF_COMPONENT_TYPE_ value
@@ -845,7 +845,7 @@ struct Accessor {
       std::string extras_json_string;
       std::string extensions_json_string;
     } indices;
-    struct {
+    struct Values {
       int bufferView;
       size_t byteOffset;
       Value extras;
@@ -1243,17 +1243,20 @@ class Model {
   std::string extensions_json_string;
 };
 
-enum SectionCheck {
-  NO_REQUIRE = 0x00,
-  REQUIRE_VERSION = 0x01,
-  REQUIRE_SCENE = 0x02,
-  REQUIRE_SCENES = 0x04,
-  REQUIRE_NODES = 0x08,
-  REQUIRE_ACCESSORS = 0x10,
-  REQUIRE_BUFFERS = 0x20,
-  REQUIRE_BUFFER_VIEWS = 0x40,
-  REQUIRE_ALL = 0x7f
+struct SectionCheck {
+  enum Enum {
+    NO_REQUIRE = 0x00,
+    REQUIRE_VERSION = 0x01,
+    REQUIRE_SCENE = 0x02,
+    REQUIRE_SCENES = 0x04,
+    REQUIRE_NODES = 0x08,
+    REQUIRE_ACCESSORS = 0x10,
+    REQUIRE_BUFFERS = 0x20,
+    REQUIRE_BUFFER_VIEWS = 0x40,
+    REQUIRE_ALL = 0x7f
+  };
 };
+
 
 ///
 /// URIEncodeFunction type. Signature for custom URI encoding of external
@@ -1417,7 +1420,7 @@ class TinyGLTF {
   ///
   bool LoadASCIIFromFile(Model *model, std::string *err, std::string *warn,
                          const std::string &filename,
-                         unsigned int check_sections = REQUIRE_VERSION);
+                         SectionCheck::Enum check_sections = SectionCheck::REQUIRE_VERSION);
 
   ///
   /// Loads glTF ASCII asset from string(memory).
@@ -1430,7 +1433,7 @@ class TinyGLTF {
   bool LoadASCIIFromString(Model *model, std::string *err, std::string *warn,
                            const char *str, const unsigned int length,
                            const std::string &base_dir,
-                           unsigned int check_sections = REQUIRE_VERSION);
+                           SectionCheck::Enum check_sections = SectionCheck::REQUIRE_VERSION);
 
   ///
   /// Loads glTF binary asset from a file.
@@ -1439,7 +1442,7 @@ class TinyGLTF {
   ///
   bool LoadBinaryFromFile(Model *model, std::string *err, std::string *warn,
                           const std::string &filename,
-                          unsigned int check_sections = REQUIRE_VERSION);
+                          SectionCheck::Enum check_sections = SectionCheck::REQUIRE_VERSION);
 
   ///
   /// Loads glTF binary asset from memory.
@@ -1453,7 +1456,7 @@ class TinyGLTF {
                             const unsigned char *bytes,
                             const unsigned int length,
                             const std::string &base_dir = "",
-                            unsigned int check_sections = REQUIRE_VERSION);
+                            SectionCheck::Enum check_sections = SectionCheck::REQUIRE_VERSION);
 
   ///
   /// Write glTF to stream, buffers and images will be embedded
@@ -1556,7 +1559,7 @@ class TinyGLTF {
   ///
   bool LoadFromString(Model *model, std::string *err, std::string *warn,
                       const char *str, const unsigned int length,
-                      const std::string &base_dir, unsigned int check_sections);
+                      const std::string &base_dir, SectionCheck::Enum check_sections);
 
   const unsigned char *bin_data_ = nullptr;
   size_t bin_size_ = 0;
@@ -5862,7 +5865,7 @@ bool TinyGLTF::LoadFromString(Model *model, std::string *err, std::string *warn,
                               const char *json_str,
                               unsigned int json_str_length,
                               const std::string &base_dir,
-                              unsigned int check_sections) {
+                              SectionCheck::Enum check_sections) {
   if (json_str_length < 4) {
     if (err) {
       (*err) = "JSON string too short.\n";
@@ -5921,7 +5924,7 @@ bool TinyGLTF::LoadFromString(Model *model, std::string *err, std::string *warn,
     }
     if (version_found) {
       // OK
-    } else if (check_sections & REQUIRE_VERSION) {
+    } else if (check_sections & SectionCheck::REQUIRE_VERSION) {
       if (err) {
         (*err) += "\"asset\" object not found in .gltf or not an object type\n";
       }
@@ -5940,7 +5943,7 @@ bool TinyGLTF::LoadFromString(Model *model, std::string *err, std::string *warn,
   };
 
   {
-    if ((check_sections & REQUIRE_SCENES) &&
+    if ((check_sections & SectionCheck::REQUIRE_SCENES) &&
         !IsArrayMemberPresent(v, "scenes")) {
       if (err) {
         (*err) += "\"scenes\" object not found in .gltf or not an array type\n";
@@ -5950,7 +5953,7 @@ bool TinyGLTF::LoadFromString(Model *model, std::string *err, std::string *warn,
   }
 
   {
-    if ((check_sections & REQUIRE_NODES) && !IsArrayMemberPresent(v, "nodes")) {
+    if ((check_sections & SectionCheck::REQUIRE_NODES) && !IsArrayMemberPresent(v, "nodes")) {
       if (err) {
         (*err) += "\"nodes\" object not found in .gltf\n";
       }
@@ -5959,7 +5962,7 @@ bool TinyGLTF::LoadFromString(Model *model, std::string *err, std::string *warn,
   }
 
   {
-    if ((check_sections & REQUIRE_ACCESSORS) &&
+    if ((check_sections & SectionCheck::REQUIRE_ACCESSORS) &&
         !IsArrayMemberPresent(v, "accessors")) {
       if (err) {
         (*err) += "\"accessors\" object not found in .gltf\n";
@@ -5969,7 +5972,7 @@ bool TinyGLTF::LoadFromString(Model *model, std::string *err, std::string *warn,
   }
 
   {
-    if ((check_sections & REQUIRE_BUFFERS) &&
+    if ((check_sections & SectionCheck::REQUIRE_BUFFERS) &&
         !IsArrayMemberPresent(v, "buffers")) {
       if (err) {
         (*err) += "\"buffers\" object not found in .gltf\n";
@@ -5979,7 +5982,7 @@ bool TinyGLTF::LoadFromString(Model *model, std::string *err, std::string *warn,
   }
 
   {
-    if ((check_sections & REQUIRE_BUFFER_VIEWS) &&
+    if ((check_sections & SectionCheck::REQUIRE_BUFFER_VIEWS) &&
         !IsArrayMemberPresent(v, "bufferViews")) {
       if (err) {
         (*err) += "\"bufferViews\" object not found in .gltf\n";
@@ -6570,7 +6573,7 @@ bool TinyGLTF::LoadASCIIFromString(Model *model, std::string *err,
                                    std::string *warn, const char *str,
                                    unsigned int length,
                                    const std::string &base_dir,
-                                   unsigned int check_sections) {
+                                   SectionCheck::Enum check_sections) {
   is_binary_ = false;
   bin_data_ = nullptr;
   bin_size_ = 0;
@@ -6581,7 +6584,7 @@ bool TinyGLTF::LoadASCIIFromString(Model *model, std::string *err,
 
 bool TinyGLTF::LoadASCIIFromFile(Model *model, std::string *err,
                                  std::string *warn, const std::string &filename,
-                                 unsigned int check_sections) {
+                                 SectionCheck::Enum check_sections) {
   std::stringstream ss;
 
   if (fs.ReadWholeFile == nullptr) {
@@ -6627,7 +6630,7 @@ bool TinyGLTF::LoadBinaryFromMemory(Model *model, std::string *err,
                                     const unsigned char *bytes,
                                     unsigned int size,
                                     const std::string &base_dir,
-                                    unsigned int check_sections) {
+                                    SectionCheck::Enum check_sections) {
   if (size < 20) {
     if (err) {
       (*err) = "Too short data size for glTF Binary.";
@@ -6789,7 +6792,7 @@ bool TinyGLTF::LoadBinaryFromMemory(Model *model, std::string *err,
 bool TinyGLTF::LoadBinaryFromFile(Model *model, std::string *err,
                                   std::string *warn,
                                   const std::string &filename,
-                                  unsigned int check_sections) {
+                                  SectionCheck::Enum check_sections) {
   std::stringstream ss;
 
   if (fs.ReadWholeFile == nullptr) {
